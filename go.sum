@@ -1,0 +1,4 @@
+github.com/MeowWolf/eoslog v1.0.2-0.20210310163530-4476f59ee2e3 h1:MzGjNTJhgMTiv/2/pH58+YFvqCkNcPE+bovGeCFj0aE=
+github.com/MeowWolf/eoslog v1.0.2-0.20210310163530-4476f59ee2e3/go.mod h1:YUYLfFOSpqkyH9VJ19Yf++5wOMXXxxqgrWJgq7DqSwc=
+github.com/streadway/amqp v1.0.0 h1:kuuDrUJFZL1QYL9hUNuCxNObNzB0bV/ZG5jV3RWAQgo=
+github.com/streadway/amqp v1.0.0/go.mod h1:AZpEONHx3DKn8O/DFsRAY58/XVQiIPMTMB1SddzLXVw=
