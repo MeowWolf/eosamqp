@@ -8,8 +8,21 @@ import (
 	"github.com/streadway/amqp"
 )
 
-// Connection ...
+// Connection is the Connection type from the streadway module
+// to be used by clients without having to imporrt streadway
 type Connection = amqp.Connection
+
+// Channel is the Channel type from the streadway module
+// to be used by clients without having to imporrt streadway
+type Channel = amqp.Channel
+
+// Delivery is the Delivery type from the streadway module
+// to be used by clients without having to imporrt streadway
+type Delivery = amqp.Delivery
+
+// Error is the Error type from the streadway module
+// to be used by clients without having to imporrt streadway
+type Error = amqp.Error
 
 // ExchangeConfig holds config data for an amqp exchange
 type ExchangeConfig struct {
