@@ -8,6 +8,9 @@ import (
 	"github.com/streadway/amqp"
 )
 
+// Connection ...
+type Connection = amqp.Connection
+
 // ExchangeConfig holds config data for an amqp exchange
 type ExchangeConfig struct {
 	Name        string
