@@ -219,3 +219,29 @@ func TestGetRoutingKeyValueByIndexThatIsTooHigh(t *testing.T) {
 		t.Errorf("GetRoutingKeyValueByIndex() error - want: ``, got: `%s`", byIndex(1))
 	}
 }
+
+/*************************************
+* Benchmarks
+*************************************/
+func BenchmarkPublish(b *testing.B) {
+	amqp := New(nil)
+	for i := 0; i < b.N; i++ {
+		amqp.Publish(
+			"exchangeName",
+			&mocks.ChannelMock{},
+			QueueConfig{},
+			[]byte("the message"),
+		)
+	}
+}
+
+func BenchmarkConsume(b *testing.B) {
+	d := deps{
+		logInfo: func(format string, v ...interface{}) {},
+	}
+	amqp := New(&d)
+
+	for i := 0; i < b.N; i++ {
+		amqp.Consume("exchangeName", &mocks.ChannelMock{}, QueueConfig{})
+	}
+}
