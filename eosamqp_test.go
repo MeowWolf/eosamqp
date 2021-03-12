@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/MeowWolf/eosamqp/mocks"
 )
 
 /*************************************
@@ -17,7 +19,7 @@ func TestAmqpConnection(t *testing.T) {
 	d := deps{
 		logError: func(format string, v ...interface{}) {
 		},
-		dial: mockDial,
+		dial: mocks.MockDial,
 	}
 	amqp := New(&d)
 	err := amqp.Connect("broker.url")
@@ -34,7 +36,7 @@ func TestBadAmqpConnection(t *testing.T) {
 		logError: func(format string, v ...interface{}) {
 			got = fmt.Sprintf(format, v...)
 		},
-		dial: mockDialError,
+		dial: mocks.MockDialError,
 	}
 
 	amqp := New(&d)
@@ -73,7 +75,7 @@ func TestConsume(t *testing.T) {
 	}
 
 	amqp := New(&d)
-	deliveryChan, err := amqp.Consume("exchangeName", &channelMock{}, QueueConfig{})
+	deliveryChan, err := amqp.Consume("exchangeName", &mocks.ChannelMock{}, QueueConfig{})
 	if !strings.Contains(got, want) {
 		t.Errorf("Consume() error - want: '%s', got: '%s'", want, got)
 	}
@@ -87,7 +89,7 @@ func TestConsume(t *testing.T) {
 
 func TestConsumeWithBadQueueDeclare(t *testing.T) {
 	amqp := New(nil)
-	deliveryChan, err := amqp.Consume("exchangeName", &channelWithBadQueueDeclareMock{}, QueueConfig{})
+	deliveryChan, err := amqp.Consume("exchangeName", &mocks.ChannelWithBadQueueDeclareMock{}, QueueConfig{})
 	if err == nil {
 		t.Errorf("Consume() err should not be nil here")
 	}
@@ -98,7 +100,7 @@ func TestConsumeWithBadQueueDeclare(t *testing.T) {
 
 func TestConsumeWithBadChannelConsume(t *testing.T) {
 	amqp := New(nil)
-	deliveryChan, err := amqp.Consume("exchangeName", &channelWithBadConsumeMock{}, QueueConfig{})
+	deliveryChan, err := amqp.Consume("exchangeName", &mocks.ChannelWithBadConsumeMock{}, QueueConfig{})
 	if err == nil {
 		t.Errorf("Consume() err should not be nil here")
 	}
@@ -117,7 +119,7 @@ func TestConsumeWithBadQueueBind(t *testing.T) {
 		},
 	}
 	amqp := New(&d)
-	_, err := amqp.Consume("exchangeName", &channelWithBadQueueBindMock{}, QueueConfig{})
+	_, err := amqp.Consume("exchangeName", &mocks.ChannelWithBadQueueBindMock{}, QueueConfig{})
 	if !strings.Contains(got, want) {
 		t.Errorf("Consume() error - want: '%s', got: '%s'", want, got)
 	}
@@ -133,7 +135,7 @@ func TestPublish(t *testing.T) {
 	amqp := New(nil)
 	err := amqp.Publish(
 		"exchangeName",
-		&channelMock{},
+		&mocks.ChannelMock{},
 		QueueConfig{},
 		[]byte("the message"),
 	)
@@ -155,7 +157,7 @@ func TestPublishWithBadChannelPublish(t *testing.T) {
 	amqp := New(&d)
 	err := amqp.Publish(
 		"exchangeName",
-		&channelWithBadPublishMock{},
+		&mocks.ChannelWithBadPublishMock{},
 		QueueConfig{},
 		[]byte("the message"),
 	)
