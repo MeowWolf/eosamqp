@@ -30,6 +30,7 @@ type EOSChannel interface {
 	QueueDeclare(string, bool, bool, bool, bool, amqp.Table) (amqp.Queue, error)
 	QueueBind(string, string, string, bool, amqp.Table) error
 	Consume(string, string, bool, bool, bool, bool, amqp.Table) (<-chan Delivery, error)
+	Publish(string, string, bool, bool, amqp.Publishing) error
 }
 
 // ExchangeConfig holds config data for an amqp exchange
@@ -61,7 +62,6 @@ type Amqp struct {
 	logInfo  func(format string, v ...interface{})
 
 	conn *amqp.Connection
-	ch   EOSChannel
 }
 
 type deps struct {
@@ -92,8 +92,8 @@ func New(d *deps) Amqp {
 	return a
 }
 
-// NewConnection creates a new amqp connection
-func (a *Amqp) NewConnection(brokerURL string) error {
+// Connect creates a new amqp connection
+func (a *Amqp) Connect(brokerURL string) error {
 	conn, err := a.dial(brokerURL)
 	if err != nil {
 		a.conn = nil
@@ -105,24 +105,22 @@ func (a *Amqp) NewConnection(brokerURL string) error {
 	return nil
 }
 
-// NewChannel creates a new amqp channel
+// NewChannel creates and returns a new amqp channel
 func (a *Amqp) NewChannel(
 	conn *amqp.Connection,
 	config ExchangeConfig,
-) error {
+) (EOSChannel, error) {
 	if conn == nil {
-		return fmt.Errorf("could not create channel, no connection to broker")
+		return nil, fmt.Errorf("could not create channel, no connection to broker")
 	}
 
 	ch, err := conn.Channel()
 	if err != nil {
 		a.logError("failed to open a channel: %s", err)
-		return err
+		return nil, err
 	}
 
-	a.ch = ch
-
-	if err := a.ch.ExchangeDeclare(
+	if err := ch.ExchangeDeclare(
 		config.Name,
 		config.Type,
 		config.Durable,
@@ -132,10 +130,10 @@ func (a *Amqp) NewChannel(
 		config.Arguments,
 	); err != nil {
 		a.logError("could not declare exchange: %s", err)
-		return err
+		return nil, err
 	}
 
-	return nil
+	return ch, nil
 }
 
 // Consume binds a queue to an exchange and sets up a message consumer on a given channel
@@ -150,7 +148,10 @@ func (a *Amqp) Consume(
 		return nil, err
 	}
 
-	a.bindQueue(exchangeName, ch, q, qc)
+	if err := a.bindQueue(exchangeName, ch, q, qc); err != nil {
+		a.logError("failed to register a consumer: %s", err)
+		return nil, err
+	}
 
 	messageChan, err := ch.Consume(
 		q.Name,       // queue
@@ -162,7 +163,7 @@ func (a *Amqp) Consume(
 		qc.Arguments, // args
 	)
 	if err != nil {
-		a.logError("Failed to register a consumer: %s", err)
+		a.logError("failed to register a consumer: %s", err)
 		return nil, err
 	}
 
@@ -170,13 +171,13 @@ func (a *Amqp) Consume(
 	return messageChan, nil
 }
 
-// PublishAmqpMessage publishes an amqp message
-func (a *Amqp) PublishAmqpMessage(
+// Publish publishes an amqp message
+func (a *Amqp) Publish(
 	exchangeName string,
-	ch *amqp.Channel,
+	ch EOSChannel,
 	qc QueueConfig,
 	payload []byte,
-) {
+) error {
 	err := ch.Publish(
 		exchangeName,  // exchange
 		qc.RoutingKey, // routing key
@@ -187,8 +188,10 @@ func (a *Amqp) PublishAmqpMessage(
 			Body:        payload,
 		})
 	if err != nil {
-		a.logError("Failed to publish a message: %s", err)
+		a.logError("failed to publish a message: %s", err)
+		return err
 	}
+	return nil
 }
 
 func (a *Amqp) declareQueue(ch EOSChannel, qc QueueConfig) (*amqp.Queue, error) {
@@ -201,7 +204,7 @@ func (a *Amqp) declareQueue(ch EOSChannel, qc QueueConfig) (*amqp.Queue, error) 
 		qc.Arguments,  // arguments
 	)
 	if err != nil {
-		a.logError("Failed to declare a queue: %s", err)
+		a.logError("failed to declare a queue: %s", err)
 		return nil, err
 	}
 
@@ -218,7 +221,7 @@ func (a *Amqp) bindQueue(exchangeName string, ch EOSChannel, q *amqp.Queue, qc Q
 	)
 
 	if err != nil {
-		a.logError("Failed to bind a queue: %s", err)
+		a.logError("failed to bind a queue: %s", err)
 		return err
 	}
 
@@ -226,9 +229,9 @@ func (a *Amqp) bindQueue(exchangeName string, ch EOSChannel, q *amqp.Queue, qc Q
 }
 
 // GetBrokerURL constructs an amqp broker url used to create a connection
-func GetBrokerURL(useTLS, username, password, host, port string) string {
+func GetBrokerURL(useTLS bool, username, password, host, port string) string {
 	var protocol string
-	if useTLS != "false" {
+	if useTLS {
 		protocol = "amqps://"
 	} else {
 		protocol = "amqp://"

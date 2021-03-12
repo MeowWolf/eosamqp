@@ -11,7 +11,7 @@ import (
 )
 
 /*************************************
-* NewConnection
+* Connect
 *************************************/
 func TestAmqpConnection(t *testing.T) {
 	d := deps{
@@ -20,7 +20,7 @@ func TestAmqpConnection(t *testing.T) {
 		dial: mockDial,
 	}
 	amqp := New(&d)
-	err := amqp.NewConnection("broker.url")
+	err := amqp.Connect("broker.url")
 	if err != nil {
 		t.Errorf("NewConnection() We should not have an error here")
 	}
@@ -38,9 +38,9 @@ func TestBadAmqpConnection(t *testing.T) {
 	}
 
 	amqp := New(&d)
-	amqp.NewConnection("hello")
+	amqp.Connect("hello")
 	if !strings.Contains(got, want) {
-		t.Errorf("NewConnection() error - want: %s, got: %s", want, got)
+		t.Errorf("NewConnection() error - want: '%s', got: '%s'", want, got)
 	}
 }
 
@@ -52,73 +52,36 @@ func TestNewChannelWithNilConnection(t *testing.T) {
 	got := ""
 
 	amqp := New(nil)
-	err := amqp.NewChannel(nil, ExchangeConfig{})
+	_, err := amqp.NewChannel(nil, ExchangeConfig{})
 	got = err.Error()
 	if !strings.Contains(got, want) {
-		t.Errorf("NewChannel() error - want: %s, got: %s", want, got)
+		t.Errorf("NewChannel() error - want: '%s', got: '%s'", want, got)
 	}
 }
-
-// func TestNewChannelThatWillNotOpen(t *testing.T) {
-// 	want := "failed to open"
-// 	got := ""
-
-// 	d := deps{
-// 		logError: func(format string, v ...interface{}) {
-// 			got = fmt.Sprintf(format, v...)
-// 		},
-// 		dial: mockDialError,
-// 	}
-
-// 	amqp := New(&d)
-// 	amqp.NewChannel(&badConnectionMock{}, ExchangeConfig{})
-// 	if !strings.Contains(got, want) {
-// 		t.Errorf("NewChannel() error - want: %s, got: %s", want, got)
-// 	}
-// }
-
-// func TestNewChanneThatReturnsAnError(t *testing.T) {
-// 	want := "could not declare"
-// 	got := ""
-
-// 	d := deps{
-// 		logError: func(format string, v ...interface{}) {
-// 			got = fmt.Sprintf(format, v...)
-// 		},
-// 		dial: mockDialError,
-// 	}
-
-// 	amqp := New(&d)
-// 	amqp.NewChannel(&connectionMockWithBadChannel{}, ExchangeConfig{})
-// 	if !strings.Contains(got, want) {
-// 		t.Errorf("NewChannel() error - want: %s, got: %s", want, got)
-// 	}
-// }
-
-// func TestNewChanne(t *testing.T) {
-
-// 	d := deps{
-// 		dial: mockDialError,
-// 	}
-
-// 	amqp := New(&d)
-// 	err := amqp.NewChannel(&connectionMock{}, ExchangeConfig{})
-// 	if err != nil {
-// 		t.Errorf("NewChannel() should not have an error here: %s", err)
-// 	}
-// }
 
 /*************************************
 * Consume
 *************************************/
 func TestConsume(t *testing.T) {
-	amqp := New(nil)
+	want := "Waiting for"
+	got := ""
+
+	d := deps{
+		logInfo: func(format string, v ...interface{}) {
+			got = fmt.Sprintf(format, v...)
+		},
+	}
+
+	amqp := New(&d)
 	deliveryChan, err := amqp.Consume("exchangeName", &channelMock{}, QueueConfig{})
+	if !strings.Contains(got, want) {
+		t.Errorf("Consume() error - want: '%s', got: '%s'", want, got)
+	}
 	if err != nil {
-		t.Errorf("Consumer() err should be nil here: %s", err)
+		t.Errorf("Consume() err should be nil here: %s", err)
 	}
 	if deliveryChan == nil {
-		t.Errorf("Consumer() returned delivery chan should not be nil")
+		t.Errorf("Consume() returned delivery chan should not be nil")
 	}
 }
 
@@ -126,9 +89,131 @@ func TestConsumeWithBadQueueDeclare(t *testing.T) {
 	amqp := New(nil)
 	deliveryChan, err := amqp.Consume("exchangeName", &channelWithBadQueueDeclareMock{}, QueueConfig{})
 	if err == nil {
-		t.Errorf("Consumer() err should not be nil here")
+		t.Errorf("Consume() err should not be nil here")
 	}
 	if deliveryChan != nil {
-		t.Errorf("Consumer() returned delivery chan that should be nil")
+		t.Errorf("Consumer) returned delivery chan that should be nil")
+	}
+}
+
+func TestConsumeWithBadChannelConsume(t *testing.T) {
+	amqp := New(nil)
+	deliveryChan, err := amqp.Consume("exchangeName", &channelWithBadConsumeMock{}, QueueConfig{})
+	if err == nil {
+		t.Errorf("Consume() err should not be nil here")
+	}
+	if deliveryChan != nil {
+		t.Errorf("Consume() returned delivery chan that should be nil")
+	}
+}
+
+func TestConsumeWithBadQueueBind(t *testing.T) {
+	want := "failed to register"
+	got := ""
+
+	d := deps{
+		logError: func(format string, v ...interface{}) {
+			got = fmt.Sprintf(format, v...)
+		},
+	}
+	amqp := New(&d)
+	_, err := amqp.Consume("exchangeName", &channelWithBadQueueBindMock{}, QueueConfig{})
+	if !strings.Contains(got, want) {
+		t.Errorf("Consume() error - want: '%s', got: '%s'", want, got)
+	}
+	if err == nil {
+		t.Errorf("Consume() err should not be nil here")
+	}
+}
+
+/*************************************
+* Publish
+*************************************/
+func TestPublish(t *testing.T) {
+	amqp := New(nil)
+	err := amqp.Publish(
+		"exchangeName",
+		&channelMock{},
+		QueueConfig{},
+		[]byte("the message"),
+	)
+	if err != nil {
+		t.Errorf("Publish() err should be nil here")
+	}
+}
+
+func TestPublishWithBadChannelPublish(t *testing.T) {
+	want := "failed to publish"
+	got := ""
+
+	d := deps{
+		logError: func(format string, v ...interface{}) {
+			got = fmt.Sprintf(format, v...)
+		},
+	}
+
+	amqp := New(&d)
+	err := amqp.Publish(
+		"exchangeName",
+		&channelWithBadPublishMock{},
+		QueueConfig{},
+		[]byte("the message"),
+	)
+
+	if !strings.Contains(got, want) {
+		t.Errorf("Publish() error - want: '%s', got: '%s'", want, got)
+	}
+	if err == nil {
+		t.Errorf("Publish() err should not be nil here")
+	}
+}
+
+/*************************************
+* GetBrokerURL
+*************************************/
+func TestGetBrokerURLWithoutTLS(t *testing.T) {
+	want := "amqp://user:pass@host:5672/"
+	got := GetBrokerURL(false, "user", "pass", "host", "5672")
+
+	if !strings.Contains(got, want) {
+		t.Errorf("GetBrokerURL() error - want: '%s', got: '%s'", want, got)
+	}
+}
+
+func TestGetBrokerURLWithTLS(t *testing.T) {
+	want := "amqps://user:pass@host:5672/"
+	got := GetBrokerURL(true, "user", "pass", "host", "5672")
+
+	if !strings.Contains(got, want) {
+		t.Errorf("GetBrokerURL() error - want: '%s', got: '%s'", want, got)
+	}
+}
+
+/*************************************
+* GetRoutingKeyValueByIndex
+*************************************/
+func TestGetRoutingKeyValueByIndex(t *testing.T) {
+	routingKey := "make.sure.your.optics.are.clean"
+	byIndex := GetRoutingKeyValueByIndex(routingKey)
+
+	if byIndex(1) != "sure" {
+		t.Errorf("GetRoutingKeyValueByIndex() error - want: `sure`, got: `%s`", byIndex(1))
+	}
+
+	if byIndex(3) != "optics" {
+		t.Errorf("GetRoutingKeyValueByIndex() error - want: 'optics', got: '%s'", byIndex(3))
+	}
+
+	if byIndex(5) != "clean" {
+		t.Errorf("GetRoutingKeyValueByIndex() error - want: `clean`, got: `%s`", byIndex(5))
+	}
+}
+
+func TestGetRoutingKeyValueByIndexThatIsTooHigh(t *testing.T) {
+	routingKey := "kent!"
+	byIndex := GetRoutingKeyValueByIndex(routingKey)
+
+	if byIndex(1) != "" {
+		t.Errorf("GetRoutingKeyValueByIndex() error - want: ``, got: `%s`", byIndex(1))
 	}
 }

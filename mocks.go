@@ -15,27 +15,6 @@ func mockDialError(url string) (*amqp.Connection, error) {
 }
 
 /*************************************
-* Connection
-*************************************/
-type connectionMock struct{}
-
-func (c *connectionMock) Channel() (EOSChannel, error) {
-	return &channelMock{}, nil
-}
-
-type connectionMockWithBadChannel struct{}
-
-func (c *connectionMockWithBadChannel) Channel() (EOSChannel, error) {
-	return &badChannelMock{}, nil
-}
-
-type badConnectionMock struct{}
-
-func (c *badConnectionMock) Channel() (EOSChannel, error) {
-	return &amqp.Channel{}, fmt.Errorf("an error occurred")
-}
-
-/*************************************
 * Channel
 *************************************/
 type channelMock struct{}
@@ -57,26 +36,8 @@ func (c *channelMock) Consume(name, consumer string, noAck, exclusive, noLocal, 
 	return deliveryChan, nil
 }
 
-/*************************************
-* Bad Channel
-*************************************/
-type badChannelMock struct{}
-
-func (c *badChannelMock) ExchangeDeclare(name, etype string, durable, autoDeleted, internal, noWait bool, arguments amqp.Table) error {
-	return fmt.Errorf("an error occurred")
-}
-
-func (c *badChannelMock) QueueDeclare(name string, durable, autoDeleted, exclusive, noWait bool, arguments amqp.Table) (amqp.Queue, error) {
-	return amqp.Queue{}, nil
-}
-
-func (c *badChannelMock) QueueBind(name, routingKey, exchangeName string, noWait bool, arguments amqp.Table) error {
+func (c *channelMock) Publish(exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error {
 	return nil
-}
-
-func (c *badChannelMock) Consume(name, consumer string, noAck, exclusive, noLocal, noWait bool, arguments amqp.Table) (<-chan Delivery, error) {
-	deliveryChan := make(chan Delivery)
-	return deliveryChan, nil
 }
 
 /*************************************
@@ -99,4 +60,84 @@ func (c *channelWithBadQueueDeclareMock) QueueBind(name, routingKey, exchangeNam
 func (c *channelWithBadQueueDeclareMock) Consume(name, consumer string, noAck, exclusive, noLocal, noWait bool, arguments amqp.Table) (<-chan Delivery, error) {
 	deliveryChan := make(chan Delivery)
 	return deliveryChan, nil
+}
+func (c *channelWithBadQueueDeclareMock) Publish(exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error {
+	return nil
+}
+
+/*************************************
+* Channel with bad Consume
+*************************************/
+type channelWithBadConsumeMock struct{}
+
+func (c *channelWithBadConsumeMock) ExchangeDeclare(name, etype string, durable, autoDeleted, internal, noWait bool, arguments amqp.Table) error {
+	return nil
+}
+
+func (c *channelWithBadConsumeMock) QueueDeclare(name string, durable, autoDeleted, exclusive, noWait bool, arguments amqp.Table) (amqp.Queue, error) {
+	return amqp.Queue{}, nil
+}
+
+func (c *channelWithBadConsumeMock) QueueBind(name, routingKey, exchangeName string, noWait bool, arguments amqp.Table) error {
+	return nil
+}
+
+func (c *channelWithBadConsumeMock) Consume(name, consumer string, noAck, exclusive, noLocal, noWait bool, arguments amqp.Table) (<-chan Delivery, error) {
+	deliveryChan := make(chan Delivery)
+	return deliveryChan, fmt.Errorf("an error occurred")
+}
+func (c *channelWithBadConsumeMock) Publish(exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error {
+	return nil
+}
+
+/*************************************
+* Channel with bad QueueBind
+*************************************/
+type channelWithBadQueueBindMock struct{}
+
+func (c *channelWithBadQueueBindMock) ExchangeDeclare(name, etype string, durable, autoDeleted, internal, noWait bool, arguments amqp.Table) error {
+	return nil
+}
+
+func (c *channelWithBadQueueBindMock) QueueDeclare(name string, durable, autoDeleted, exclusive, noWait bool, arguments amqp.Table) (amqp.Queue, error) {
+	return amqp.Queue{}, nil
+}
+
+func (c *channelWithBadQueueBindMock) QueueBind(name, routingKey, exchangeName string, noWait bool, arguments amqp.Table) error {
+	return fmt.Errorf("an error occurred")
+}
+
+func (c *channelWithBadQueueBindMock) Consume(name, consumer string, noAck, exclusive, noLocal, noWait bool, arguments amqp.Table) (<-chan Delivery, error) {
+	deliveryChan := make(chan Delivery)
+	return deliveryChan, nil
+}
+
+func (c *channelWithBadQueueBindMock) Publish(exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error {
+	return nil
+}
+
+/*************************************
+* Channel with bad Publish
+*************************************/
+type channelWithBadPublishMock struct{}
+
+func (c *channelWithBadPublishMock) ExchangeDeclare(name, etype string, durable, autoDeleted, internal, noWait bool, arguments amqp.Table) error {
+	return nil
+}
+
+func (c *channelWithBadPublishMock) QueueDeclare(name string, durable, autoDeleted, exclusive, noWait bool, arguments amqp.Table) (amqp.Queue, error) {
+	return amqp.Queue{}, nil
+}
+
+func (c *channelWithBadPublishMock) QueueBind(name, routingKey, exchangeName string, noWait bool, arguments amqp.Table) error {
+	return nil
+}
+
+func (c *channelWithBadPublishMock) Consume(name, consumer string, noAck, exclusive, noLocal, noWait bool, arguments amqp.Table) (<-chan Delivery, error) {
+	deliveryChan := make(chan Delivery)
+	return deliveryChan, nil
+}
+
+func (c *channelWithBadPublishMock) Publish(exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error {
+	return fmt.Errorf("an error occurred")
 }
