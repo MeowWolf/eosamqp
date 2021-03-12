@@ -9,20 +9,28 @@ import (
 )
 
 // Connection is the Connection type from the streadway module
-// to be used by clients without having to imporrt streadway
+// to be used by clients without having to import streadway
 type Connection = amqp.Connection
 
 // Channel is the Channel type from the streadway module
-// to be used by clients without having to imporrt streadway
+// to be used by clients without having to import streadway
 type Channel = amqp.Channel
 
 // Delivery is the Delivery type from the streadway module
-// to be used by clients without having to imporrt streadway
+// to be used by clients without having to import streadway
 type Delivery = amqp.Delivery
 
 // Error is the Error type from the streadway module
-// to be used by clients without having to imporrt streadway
+// to be used by clients without having to import streadway
 type Error = amqp.Error
+
+// EOSChannel ...
+type EOSChannel interface {
+	ExchangeDeclare(string, string, bool, bool, bool, bool, amqp.Table) error
+	QueueDeclare(string, bool, bool, bool, bool, amqp.Table) (amqp.Queue, error)
+	QueueBind(string, string, string, bool, amqp.Table) error
+	Consume(string, string, bool, bool, bool, bool, amqp.Table) (<-chan Delivery, error)
+}
 
 // ExchangeConfig holds config data for an amqp exchange
 type ExchangeConfig struct {
@@ -47,56 +55,123 @@ type QueueConfig struct {
 	Arguments  amqp.Table
 }
 
-// NewConnection creates and returns a new amqp connection
-func NewConnection(brokerURL string) (*amqp.Connection, error) {
-	conn, err := amqp.Dial(brokerURL)
-	if err != nil {
-		log.Error.Printf("Failed to connect to RabbitMQ: %s", err)
-		return nil, err
-	}
+type Amqp struct {
+	dial     func(url string) (*Connection, error)
+	logError func(format string, v ...interface{})
+	logInfo  func(format string, v ...interface{})
 
-	return conn, nil
+	conn *amqp.Connection
+	ch   EOSChannel
 }
 
-// NewChannel creates and returns a new amqp channel
-func NewChannel(
-	conn *amqp.Connection,
-	exConfig ExchangeConfig,
-) (*amqp.Channel, error) {
-	if conn == nil {
-		return nil, fmt.Errorf("could not create channel, no connection to broker")
+type deps struct {
+	dial     func(url string) (*Connection, error)
+	logError func(format string, v ...interface{})
+	logInfo  func(format string, v ...interface{})
+}
+
+// New creates a new instance of Amqp struct
+func New(d *deps) Amqp {
+	a := Amqp{}
+	if d != nil && d.dial != nil {
+		a.dial = d.dial
+	} else {
+		a.dial = amqp.Dial
 	}
+	if d != nil && d.logError != nil {
+		a.logError = d.logError
+	} else {
+		a.logError = log.Error.Printf
+	}
+	if d != nil && d.logInfo != nil {
+		a.logInfo = d.logInfo
+	} else {
+		a.logInfo = log.Info.Printf
+	}
+
+	return a
+}
+
+// NewConnection creates a new amqp connection
+func (a *Amqp) NewConnection(brokerURL string) error {
+	conn, err := a.dial(brokerURL)
+	if err != nil {
+		a.conn = nil
+		a.logError("failed to connect to RabbitMQ: %s", err)
+		return err
+	}
+
+	a.conn = conn
+	return nil
+}
+
+// NewChannel creates a new amqp channel
+func (a *Amqp) NewChannel(
+	conn *amqp.Connection,
+	config ExchangeConfig,
+) error {
+	if conn == nil {
+		return fmt.Errorf("could not create channel, no connection to broker")
+	}
+
 	ch, err := conn.Channel()
 	if err != nil {
-		log.Error.Printf("Failed to open a channel: %s", err)
-		return nil, err
+		a.logError("failed to open a channel: %s", err)
+		return err
 	}
 
-	if err := ch.ExchangeDeclare(
-		exConfig.Name,
-		exConfig.Type,
-		exConfig.Durable,
-		exConfig.AutoDeleted,
-		exConfig.Internal,
-		exConfig.NoWait,
-		exConfig.Arguments,
+	a.ch = ch
+
+	if err := a.ch.ExchangeDeclare(
+		config.Name,
+		config.Type,
+		config.Durable,
+		config.AutoDeleted,
+		config.Internal,
+		config.NoWait,
+		config.Arguments,
 	); err != nil {
-		return ch, err
+		a.logError("could not declare exchange: %s", err)
+		return err
 	}
 
-	return ch, nil
+	return nil
 }
 
 // Consume binds a queue to an exchange and sets up a message consumer on a given channel
-func Consume(
-	exchangeName string, ch *amqp.Channel, qc QueueConfig) <-chan amqp.Delivery {
-	q := declareQueue(ch, qc)
-	bindQueue(exchangeName, ch, &q, qc)
-	return consume(ch, &q, qc)
+func (a *Amqp) Consume(
+	exchangeName string,
+	ch EOSChannel,
+	qc QueueConfig,
+) (<-chan Delivery, error) {
+	q, err := a.declareQueue(ch, qc)
+	if err != nil {
+		a.logError("could not declare queue: %s", err)
+		return nil, err
+	}
+
+	a.bindQueue(exchangeName, ch, q, qc)
+
+	messageChan, err := ch.Consume(
+		q.Name,       // queue
+		"",           // consumer
+		qc.NoAck,     // auto ack
+		qc.Exclusive, // exclusive
+		false,        // no local
+		qc.NoWait,    // no wait
+		qc.Arguments, // args
+	)
+	if err != nil {
+		a.logError("Failed to register a consumer: %s", err)
+		return nil, err
+	}
+
+	a.logInfo(" [*] Waiting for messages on '" + qc.RoutingKey + "'. To exit press CTRL+C")
+	return messageChan, nil
 }
 
 // PublishAmqpMessage publishes an amqp message
-func PublishAmqpMessage(
+func (a *Amqp) PublishAmqpMessage(
 	exchangeName string,
 	ch *amqp.Channel,
 	qc QueueConfig,
@@ -112,11 +187,11 @@ func PublishAmqpMessage(
 			Body:        payload,
 		})
 	if err != nil {
-		log.Error.Printf("Failed to publish a message: %s", err)
+		a.logError("Failed to publish a message: %s", err)
 	}
 }
 
-func declareQueue(ch *amqp.Channel, qc QueueConfig) amqp.Queue {
+func (a *Amqp) declareQueue(ch EOSChannel, qc QueueConfig) (*amqp.Queue, error) {
 	q, err := ch.QueueDeclare(
 		qc.Name,       // name
 		qc.Durable,    // durable
@@ -126,13 +201,14 @@ func declareQueue(ch *amqp.Channel, qc QueueConfig) amqp.Queue {
 		qc.Arguments,  // arguments
 	)
 	if err != nil {
-		log.Error.Printf("Failed to declare a queue: %s", err)
+		a.logError("Failed to declare a queue: %s", err)
+		return nil, err
 	}
 
-	return q
+	return &q, nil
 }
 
-func bindQueue(exchangeName string, ch *amqp.Channel, q *amqp.Queue, qc QueueConfig) {
+func (a *Amqp) bindQueue(exchangeName string, ch EOSChannel, q *amqp.Queue, qc QueueConfig) error {
 	err := ch.QueueBind(
 		q.Name,        // queue name
 		qc.RoutingKey, // routing key
@@ -140,27 +216,13 @@ func bindQueue(exchangeName string, ch *amqp.Channel, q *amqp.Queue, qc QueueCon
 		qc.NoWait,
 		qc.Arguments,
 	)
-	if err != nil {
-		log.Error.Printf("Failed to bind a queue: %s", err)
-	}
-}
 
-func consume(ch *amqp.Channel, q *amqp.Queue, qc QueueConfig) <-chan amqp.Delivery {
-	messageChan, err := ch.Consume(
-		q.Name,       // queue
-		"",           // consumer
-		qc.NoAck,     // auto ack
-		qc.Exclusive, // exclusive
-		false,        // no local
-		qc.NoWait,    // no wait
-		qc.Arguments, // args
-	)
 	if err != nil {
-		log.Error.Printf("Failed to register a consumer: %s", err)
+		a.logError("Failed to bind a queue: %s", err)
+		return err
 	}
 
-	log.Info.Printf(" [*] Waiting for messages on '" + qc.RoutingKey + "'. To exit press CTRL+C")
-	return messageChan
+	return nil
 }
 
 // GetBrokerURL constructs an amqp broker url used to create a connection
