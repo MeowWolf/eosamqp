@@ -54,10 +54,39 @@ func TestNewChannelWithNilConnection(t *testing.T) {
 	got := ""
 
 	amqp := New(nil)
-	_, err := amqp.NewChannel(nil, ExchangeConfig{})
+	_, err := amqp.NewChannel(nil)
 	got = err.Error()
 	if !strings.Contains(got, want) {
 		t.Errorf("NewChannel() error - want: '%s', got: '%s'", want, got)
+	}
+}
+
+/*************************************
+* DeclareExchange
+*************************************/
+func TestDeclareExchange(t *testing.T) {
+	amqp := New(nil)
+	err := amqp.DeclareExchange(&mocks.ChannelMock{}, ExchangeConfig{})
+	if err != nil {
+		t.Errorf("DeclareExchange() err should be nil here: %s", err)
+	}
+}
+
+func TestBadDeclareExchange(t *testing.T) {
+	want := "could not declare exchange"
+	got := ""
+	d := deps{
+		logError: func(format string, v ...interface{}) {
+			got = fmt.Sprintf(format, v...)
+		},
+	}
+	amqp := New(&d)
+	err := amqp.DeclareExchange(&mocks.ChannelWithBadExchangeDeclareMock{}, ExchangeConfig{})
+	if !strings.Contains(got, want) {
+		t.Errorf("DeclareExchange() error - want: '%s', got: '%s'", want, got)
+	}
+	if err == nil {
+		t.Errorf("DeclareExchange() err should not be nil here")
 	}
 }
 

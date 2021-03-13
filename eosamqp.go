@@ -107,20 +107,24 @@ func (a *Amqp) Connect(brokerURL string) (*amqp.Connection, error) {
 }
 
 // NewChannel creates and returns a new amqp channel
-func (a *Amqp) NewChannel(
-	conn *amqp.Connection,
-	config ExchangeConfig,
-) (EOSChannel, error) {
+func (a *Amqp) NewChannel(conn *amqp.Connection) (EOSChannel, error) {
 	if conn == nil {
 		return nil, fmt.Errorf("could not create channel, no connection to broker")
 	}
-
 	ch, err := conn.Channel()
 	if err != nil {
 		a.logError("failed to open a channel: %s", err)
 		return nil, err
 	}
 
+	return ch, nil
+}
+
+// DeclareExchange declares an exchange on a channel
+func (a *Amqp) DeclareExchange(
+	ch EOSChannel,
+	config ExchangeConfig,
+) error {
 	if err := ch.ExchangeDeclare(
 		config.Name,
 		config.Type,
@@ -131,10 +135,10 @@ func (a *Amqp) NewChannel(
 		config.Arguments,
 	); err != nil {
 		a.logError("could not declare exchange: %s", err)
-		return nil, err
+		return err
 	}
 
-	return ch, nil
+	return nil
 }
 
 // Consume binds a queue to an exchange and sets up a message consumer on a given channel
