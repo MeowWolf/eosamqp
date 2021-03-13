@@ -93,16 +93,16 @@ func New(d *deps) Amqp {
 }
 
 // Connect creates a new amqp connection
-func (a *Amqp) Connect(brokerURL string) error {
+func (a *Amqp) Connect(brokerURL string) (*amqp.Connection, error) {
 	conn, err := a.dial(brokerURL)
 	if err != nil {
 		a.conn = nil
 		a.logError("failed to connect to RabbitMQ: %s", err)
-		return err
+		return nil, err
 	}
 
 	a.conn = conn
-	return nil
+	return conn, nil
 }
 
 // NewChannel creates and returns a new amqp channel

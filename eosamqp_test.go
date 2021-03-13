@@ -22,7 +22,7 @@ func TestAmqpConnection(t *testing.T) {
 		dial: mocks.MockDial,
 	}
 	amqp := New(&d)
-	err := amqp.Connect("broker.url")
+	_, err := amqp.Connect("broker.url")
 	if err != nil {
 		t.Errorf("NewConnection() We should not have an error here")
 	}
