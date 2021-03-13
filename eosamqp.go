@@ -95,8 +95,7 @@ func New(d *deps) Amqp {
 
 // Connect creates a new amqp connection
 func (a *Amqp) Connect(brokerURL string) (*amqp.Connection, error) {
-	// conn, err := a.dial(brokerURL)
-	conn, err := amqp.Dial(brokerURL)
+	conn, err := a.dial(brokerURL)
 	if err != nil {
 		a.conn = nil
 		a.logError("failed to connect to RabbitMQ: %s", err)
