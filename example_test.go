@@ -39,7 +39,6 @@ func Example() {
 	 * Publish
 	 *************************************/
 	queuePublishConfig := eosamqp.QueueConfig{
-		Name:       "publish-queue",
 		RoutingKey: "a.routing.key",
 	}
 	message := []byte("outgoing message")
