@@ -31,6 +31,7 @@ type EOSChannel interface {
 	QueueBind(string, string, string, bool, amqp.Table) error
 	Consume(string, string, bool, bool, bool, bool, amqp.Table) (<-chan Delivery, error)
 	Publish(string, string, bool, bool, amqp.Publishing) error
+	NotifyClose(chan *amqp.Error) chan *amqp.Error
 }
 
 // ExchangeConfig holds config data for an amqp exchange

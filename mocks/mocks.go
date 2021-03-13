@@ -40,6 +40,10 @@ func (c *ChannelMock) Publish(exchange, key string, mandatory, immediate bool, m
 	return nil
 }
 
+func (ch *ChannelMock) NotifyClose(c chan *amqp.Error) chan *amqp.Error {
+	return c
+}
+
 /*************************************
 * Channel with bad QueueDeclare
 *************************************/
@@ -65,6 +69,10 @@ func (c *ChannelWithBadQueueDeclareMock) Publish(exchange, key string, mandatory
 	return nil
 }
 
+func (ch *ChannelWithBadQueueDeclareMock) NotifyClose(c chan *amqp.Error) chan *amqp.Error {
+	return c
+}
+
 /*************************************
 * Channel with bad Consume
 *************************************/
@@ -88,6 +96,10 @@ func (c *ChannelWithBadConsumeMock) Consume(name, consumer string, noAck, exclus
 }
 func (c *ChannelWithBadConsumeMock) Publish(exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error {
 	return nil
+}
+
+func (ch *ChannelWithBadConsumeMock) NotifyClose(c chan *amqp.Error) chan *amqp.Error {
+	return c
 }
 
 /*************************************
@@ -116,6 +128,10 @@ func (c *ChannelWithBadQueueBindMock) Publish(exchange, key string, mandatory, i
 	return nil
 }
 
+func (ch *ChannelWithBadQueueBindMock) NotifyClose(c chan *amqp.Error) chan *amqp.Error {
+	return c
+}
+
 /*************************************
 * Channel with bad Publish
 *************************************/
@@ -140,4 +156,8 @@ func (c *ChannelWithBadPublishMock) Consume(name, consumer string, noAck, exclus
 
 func (c *ChannelWithBadPublishMock) Publish(exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error {
 	return fmt.Errorf("an error occurred")
+}
+
+func (ch *ChannelWithBadPublishMock) NotifyClose(c chan *amqp.Error) chan *amqp.Error {
+	return c
 }
