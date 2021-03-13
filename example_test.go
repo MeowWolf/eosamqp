@@ -4,7 +4,7 @@ import "github.com/MeowWolf/eosamqp"
 
 func Example() {
 
-	amqp := eosamqp.Amqp{}
+	amqp := eosamqp.New(nil)
 
 	/*************************************
 	 * Connect to broker
