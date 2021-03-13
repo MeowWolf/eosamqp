@@ -1,9 +1,5 @@
 package eosamqp
 
-// go test . -coverprofile=c.out
-// go tool cover -html=c.out
-// go test -v -run="none" -bench="Benchmark"
-
 import (
 	"fmt"
 	"strings"
