@@ -13,9 +13,9 @@ import (
 *************************************/
 func TestAmqpConnection(t *testing.T) {
 	d := Deps{
-		logError: func(format string, v ...interface{}) {
+		LogError: func(format string, v ...interface{}) {
 		},
-		dial: mocks.MockDial,
+		Dial: mocks.MockDial,
 	}
 	amqp := New(&d)
 	_, err := amqp.Connect("broker.url")
@@ -29,10 +29,10 @@ func TestBadAmqpConnection(t *testing.T) {
 	got := ""
 
 	d := Deps{
-		logError: func(format string, v ...interface{}) {
+		LogError: func(format string, v ...interface{}) {
 			got = fmt.Sprintf(format, v...)
 		},
-		dial: mocks.MockDialError,
+		Dial: mocks.MockDialError,
 	}
 
 	amqp := New(&d)
@@ -72,7 +72,7 @@ func TestBadDeclareExchange(t *testing.T) {
 	want := "could not declare exchange"
 	got := ""
 	d := Deps{
-		logError: func(format string, v ...interface{}) {
+		LogError: func(format string, v ...interface{}) {
 			got = fmt.Sprintf(format, v...)
 		},
 	}
@@ -94,7 +94,7 @@ func TestConsume(t *testing.T) {
 	got := ""
 
 	d := Deps{
-		logInfo: func(format string, v ...interface{}) {
+		LogInfo: func(format string, v ...interface{}) {
 			got = fmt.Sprintf(format, v...)
 		},
 	}
@@ -139,7 +139,7 @@ func TestConsumeWithBadQueueBind(t *testing.T) {
 	got := ""
 
 	d := Deps{
-		logError: func(format string, v ...interface{}) {
+		LogError: func(format string, v ...interface{}) {
 			got = fmt.Sprintf(format, v...)
 		},
 	}
@@ -174,7 +174,7 @@ func TestPublishWithBadChannelPublish(t *testing.T) {
 	got := ""
 
 	d := Deps{
-		logError: func(format string, v ...interface{}) {
+		LogError: func(format string, v ...interface{}) {
 			got = fmt.Sprintf(format, v...)
 		},
 	}
@@ -262,7 +262,7 @@ func BenchmarkPublish(b *testing.B) {
 
 func BenchmarkConsume(b *testing.B) {
 	d := Deps{
-		logInfo: func(format string, v ...interface{}) {},
+		LogInfo: func(format string, v ...interface{}) {},
 	}
 	amqp := New(&d)
 

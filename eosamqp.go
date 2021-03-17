@@ -68,26 +68,26 @@ type Amqp struct {
 
 // Deps is the optional dependencies struct that can be injected into a New Amqp struct
 type Deps struct {
-	dial     func(url string) (*Connection, error)
-	logError func(format string, v ...interface{})
-	logInfo  func(format string, v ...interface{})
+	Dial     func(url string) (*Connection, error)
+	LogError func(format string, v ...interface{})
+	LogInfo  func(format string, v ...interface{})
 }
 
 // New creates a new instance of Amqp struct
 func New(d *Deps) Amqp {
 	a := Amqp{}
-	if d != nil && d.dial != nil {
-		a.dial = d.dial
+	if d != nil && d.Dial != nil {
+		a.dial = d.Dial
 	} else {
 		a.dial = amqp.Dial
 	}
-	if d != nil && d.logError != nil {
-		a.logError = d.logError
+	if d != nil && d.LogError != nil {
+		a.logError = d.LogError
 	} else {
 		a.logError = log.Error.Printf
 	}
-	if d != nil && d.logInfo != nil {
-		a.logInfo = d.logInfo
+	if d != nil && d.LogInfo != nil {
+		a.logInfo = d.LogInfo
 	} else {
 		a.logInfo = log.Info.Printf
 	}
