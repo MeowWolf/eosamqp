@@ -57,6 +57,7 @@ type QueueConfig struct {
 	Arguments  amqp.Table
 }
 
+// Amqp contains a pointer to the amqp connection
 type Amqp struct {
 	dial     func(url string) (*Connection, error)
 	logError func(format string, v ...interface{})
@@ -65,14 +66,15 @@ type Amqp struct {
 	conn *amqp.Connection
 }
 
-type deps struct {
+// Deps is the optional dependencies struct that can be injected into a New Amqp struct
+type Deps struct {
 	dial     func(url string) (*Connection, error)
 	logError func(format string, v ...interface{})
 	logInfo  func(format string, v ...interface{})
 }
 
 // New creates a new instance of Amqp struct
-func New(d *deps) Amqp {
+func New(d *Deps) Amqp {
 	a := Amqp{}
 	if d != nil && d.dial != nil {
 		a.dial = d.dial
