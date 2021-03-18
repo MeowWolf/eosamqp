@@ -2,6 +2,7 @@ package eosamqp
 
 import (
 	"fmt"
+	"net"
 	"strings"
 
 	log "github.com/MeowWolf/eoslog"
@@ -36,7 +37,14 @@ type Queue = amqp.Queue
 // to be used by clients without having to import streadway
 type Table = amqp.Table
 
-// EOSChannel ...
+// EOSConnection is an interface we can use for dependency injection
+type EOSConnection interface {
+	LocalAddr() net.Addr
+	NotifyClose(chan *Error) chan *Error
+	Close() error
+}
+
+// EOSChannel is an interface we can use for dependency injection
 type EOSChannel interface {
 	ExchangeDeclare(string, string, bool, bool, bool, bool, Table) error
 	QueueDeclare(string, bool, bool, bool, bool, Table) (Queue, error)
