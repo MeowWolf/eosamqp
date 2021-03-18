@@ -96,7 +96,7 @@ func New(d *Deps) Amqp {
 }
 
 // Connect creates a new amqp connection
-func (a *Amqp) Connect(brokerURL string) (*amqp.Connection, error) {
+func (a *Amqp) Connect(brokerURL string) (*Connection, error) {
 	conn, err := a.dial(brokerURL)
 	if err != nil {
 		a.conn = nil
