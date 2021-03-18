@@ -44,6 +44,7 @@ type EOSChannel interface {
 	Consume(string, string, bool, bool, bool, bool, Table) (<-chan Delivery, error)
 	Publish(string, string, bool, bool, Publishing) error
 	NotifyClose(chan *Error) chan *Error
+	Close() error
 }
 
 // ExchangeConfig holds config data for an amqp exchange
