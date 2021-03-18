@@ -24,14 +24,26 @@ type Delivery = amqp.Delivery
 // to be used by clients without having to import streadway
 type Error = amqp.Error
 
+// Publishing is the Error type from the streadway module
+// to be used by clients without having to import streadway
+type Publishing = amqp.Publishing
+
+// Queue is the Error type from the streadway module
+// to be used by clients without having to import streadway
+type Queue = amqp.Queue
+
+// Table is the Error type from the streadway module
+// to be used by clients without having to import streadway
+type Table = amqp.Table
+
 // EOSChannel ...
 type EOSChannel interface {
-	ExchangeDeclare(string, string, bool, bool, bool, bool, amqp.Table) error
-	QueueDeclare(string, bool, bool, bool, bool, amqp.Table) (amqp.Queue, error)
-	QueueBind(string, string, string, bool, amqp.Table) error
-	Consume(string, string, bool, bool, bool, bool, amqp.Table) (<-chan Delivery, error)
-	Publish(string, string, bool, bool, amqp.Publishing) error
-	NotifyClose(chan *amqp.Error) chan *amqp.Error
+	ExchangeDeclare(string, string, bool, bool, bool, bool, Table) error
+	QueueDeclare(string, bool, bool, bool, bool, Table) (Queue, error)
+	QueueBind(string, string, string, bool, Table) error
+	Consume(string, string, bool, bool, bool, bool, Table) (<-chan Delivery, error)
+	Publish(string, string, bool, bool, Publishing) error
+	NotifyClose(chan *Error) chan *Error
 }
 
 // ExchangeConfig holds config data for an amqp exchange
@@ -42,7 +54,7 @@ type ExchangeConfig struct {
 	AutoDeleted bool
 	Internal    bool
 	NoWait      bool
-	Arguments   amqp.Table
+	Arguments   Table
 }
 
 // QueueConfig holds config data for an amqp queue
@@ -54,7 +66,7 @@ type QueueConfig struct {
 	Exclusive  bool
 	NoWait     bool
 	NoAck      bool
-	Arguments  amqp.Table
+	Arguments  Table
 }
 
 // Amqp contains a pointer to the amqp connection
@@ -63,7 +75,7 @@ type Amqp struct {
 	logError func(format string, v ...interface{})
 	logInfo  func(format string, v ...interface{})
 
-	conn *amqp.Connection
+	conn *Connection
 }
 
 // Deps is the optional dependencies struct that can be injected into a New Amqp struct
@@ -109,7 +121,7 @@ func (a *Amqp) Connect(brokerURL string) (*Connection, error) {
 }
 
 // NewChannel creates and returns a new amqp channel
-func (a *Amqp) NewChannel(conn *amqp.Connection) (EOSChannel, error) {
+func (a *Amqp) NewChannel(conn *Connection) (EOSChannel, error) {
 	if conn == nil {
 		return nil, fmt.Errorf("could not create channel, no connection to broker")
 	}
@@ -190,7 +202,7 @@ func (a *Amqp) Publish(
 		qc.RoutingKey, // routing key
 		false,         // mandatory
 		false,         // immediate
-		amqp.Publishing{
+		Publishing{
 			ContentType: "text/json",
 			Body:        payload,
 		})
@@ -201,7 +213,7 @@ func (a *Amqp) Publish(
 	return nil
 }
 
-func (a *Amqp) declareQueue(ch EOSChannel, qc QueueConfig) (*amqp.Queue, error) {
+func (a *Amqp) declareQueue(ch EOSChannel, qc QueueConfig) (*Queue, error) {
 	q, err := ch.QueueDeclare(
 		qc.Name,       // name
 		qc.Durable,    // durable
@@ -218,7 +230,7 @@ func (a *Amqp) declareQueue(ch EOSChannel, qc QueueConfig) (*amqp.Queue, error) 
 	return &q, nil
 }
 
-func (a *Amqp) bindQueue(exchangeName string, ch EOSChannel, q *amqp.Queue, qc QueueConfig) error {
+func (a *Amqp) bindQueue(exchangeName string, ch EOSChannel, q *Queue, qc QueueConfig) error {
 	err := ch.QueueBind(
 		q.Name,        // queue name
 		qc.RoutingKey, // routing key
